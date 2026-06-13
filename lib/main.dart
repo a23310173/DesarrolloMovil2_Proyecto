@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'trailer_stock_api_config.dart';
+import 'trailer_stock_data.dart';
+import 'trailer_stock_models.dart';
+import 'trailer_stock_vps_repository.dart';
+
 void main() {
   runApp(const TrailerStockApp());
 }
@@ -14,65 +19,132 @@ class TrailerStockApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: TrailerStockColors.ivory,
+        scaffoldBackgroundColor: TrailerStockColors.canvas,
         colorScheme: ColorScheme.fromSeed(
           seedColor: TrailerStockColors.steelBlue,
           primary: TrailerStockColors.steelBlue,
           secondary: TrailerStockColors.industrialOrange,
-          surface: Colors.white,
+          surface: TrailerStockColors.paper,
+          brightness: Brightness.light,
         ),
         textTheme: const TextTheme(
           headlineMedium: TextStyle(
-            fontSize: 28,
+            fontSize: 30,
             fontWeight: FontWeight.w800,
-            color: TrailerStockColors.steelBlue,
-            letterSpacing: -0.5,
+            color: TrailerStockColors.ink,
+            letterSpacing: -0.8,
           ),
           titleLarge: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: TrailerStockColors.steelBlue,
+            color: TrailerStockColors.ink,
           ),
           titleMedium: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: TrailerStockColors.steelBlue,
+            color: TrailerStockColors.ink,
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
-            color: TrailerStockColors.metalGray,
+            color: TrailerStockColors.slate,
+            height: 1.5,
           ),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: TrailerStockColors.ink,
+          ),
+          iconTheme: IconThemeData(color: TrailerStockColors.ink),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          fillColor: Colors.white.withValues(alpha: 0.9),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 18,
+          ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: TrailerStockColors.borderSoft),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: TrailerStockColors.line),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(
               color: TrailerStockColors.industrialOrange,
-              width: 1.3,
+              width: 1.4,
             ),
+          ),
+          labelStyle: const TextStyle(
+            color: TrailerStockColors.slate,
+            fontWeight: FontWeight.w600,
           ),
         ),
         chipTheme: const ChipThemeData(
           shape: StadiumBorder(),
           side: BorderSide.none,
         ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white.withValues(alpha: 0.96),
+          height: 78,
+          indicatorColor: TrailerStockColors.steelBlue.withValues(alpha: 0.12),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+        navigationRailTheme: const NavigationRailThemeData(
+          selectedIconTheme: IconThemeData(
+            color: TrailerStockColors.industrialOrange,
+          ),
+          selectedLabelTextStyle: TextStyle(
+            color: TrailerStockColors.industrialOrange,
+            fontWeight: FontWeight.w700,
+          ),
+          unselectedIconTheme: IconThemeData(color: Color(0xFF96A4B5)),
+          unselectedLabelTextStyle: TextStyle(
+            color: Color(0xFF96A4B5),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: TrailerStockColors.industrialOrange,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: TrailerStockColors.ink,
+            side: const BorderSide(color: TrailerStockColors.line),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
         cardTheme: CardThemeData(
           elevation: 0,
-          color: Colors.white,
+          color: TrailerStockColors.paper,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: TrailerStockColors.borderSoft),
+            borderRadius: BorderRadius.circular(28),
+            side: const BorderSide(color: TrailerStockColors.line),
           ),
         ),
       ),
@@ -89,307 +161,88 @@ class TrailerStockRoot extends StatefulWidget {
 }
 
 class _TrailerStockRootState extends State<TrailerStockRoot> {
-  SessionUser? _currentUser;
-  int _currentIndex = 0;
-  String _inventoryQuery = '';
-  String _inventoryCategory = 'Todos';
+  late final TrailerStockController _controller;
 
-  final List<InventoryItem> _inventory = [
-    InventoryItem(
-      sku: 'BRK-1102',
-      name: 'Balata premium de remolque',
-      category: 'Frenos',
-      unit: 'Juego',
-      location: 'Rack A-02',
-      stock: 14,
-      minimumStock: 8,
-      imageLabel: 'BRK',
-    ),
-    InventoryItem(
-      sku: 'SUS-2048',
-      name: 'Bolsa de suspension 1T15',
-      category: 'Suspension',
-      unit: 'Pieza',
-      location: 'Rack B-04',
-      stock: 5,
-      minimumStock: 6,
-      imageLabel: 'AIR',
-    ),
-    InventoryItem(
-      sku: 'LGT-7780',
-      name: 'Lampara lateral LED',
-      category: 'Iluminacion',
-      unit: 'Pieza',
-      location: 'Rack C-01',
-      stock: 27,
-      minimumStock: 10,
-      imageLabel: 'LED',
-    ),
-    InventoryItem(
-      sku: 'ELE-5099',
-      name: 'Arnes electrico de 7 vias',
-      category: 'Electrico',
-      unit: 'Pieza',
-      location: 'Rack C-03',
-      stock: 3,
-      minimumStock: 5,
-      imageLabel: '7P',
-    ),
-    InventoryItem(
-      sku: 'TIR-3005',
-      name: 'Llanta 295/75 R22.5',
-      category: 'Rodado',
-      unit: 'Pieza',
-      location: 'Patio D-01',
-      stock: 9,
-      minimumStock: 4,
-      imageLabel: '295',
-    ),
-  ];
-
-  final List<MovementRecord> _movements = [
-    MovementRecord(
-      id: 'MOV-9001',
-      sku: 'BRK-1102',
-      productName: 'Balata premium de remolque',
-      type: MovementType.exit,
-      quantity: 2,
-      responsible: 'Mario Perez',
-      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      status: MovementStatus.approved,
-      evidenceAttached: true,
-      notes: 'Servicio preventivo unidad TX-19',
-    ),
-    MovementRecord(
-      id: 'MOV-9002',
-      sku: 'ELE-5099',
-      productName: 'Arnes electrico de 7 vias',
-      type: MovementType.entry,
-      quantity: 4,
-      responsible: 'Laura Ruiz',
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-      status: MovementStatus.completed,
-      evidenceAttached: true,
-      notes: 'Recepcion de proveedor Industrial Parts',
-    ),
-    MovementRecord(
-      id: 'MOV-9003',
-      sku: 'SUS-2048',
-      productName: 'Bolsa de suspension 1T15',
-      type: MovementType.adjustment,
-      quantity: 1,
-      responsible: 'Carlos Nunez',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      status: MovementStatus.pendingApproval,
-      evidenceAttached: false,
-      notes: 'Ajuste por inventario fisico.',
-    ),
-  ];
-
-  final List<ApprovalRequest> _approvals = [
-    ApprovalRequest(
-      id: 'APR-5001',
-      movementId: 'MOV-9003',
-      productName: 'Bolsa de suspension 1T15',
-      supervisor: 'Supervisor de turno',
-      comments: 'Validar costo y existencia antes de liberar.',
-      status: ApprovalStatus.pending,
-      requestedAt: DateTime.now().subtract(const Duration(hours: 7)),
-    ),
-    ApprovalRequest(
-      id: 'APR-5002',
-      movementId: 'MOV-9010',
-      productName: 'Modulo ABS trailer',
-      supervisor: 'Jefe de almacen',
-      comments: 'Pieza de alto valor para salida urgente.',
-      status: ApprovalStatus.pending,
-      requestedAt: DateTime.now().subtract(const Duration(hours: 10)),
-    ),
-  ];
-
-  final List<Supplier> _suppliers = [
-    Supplier(
-      name: 'Industrial Parts Hub',
-      specialty: 'Frenos y suspension',
-      phone: '+1 713 555 0182',
-      address: '1450 East Beltway, Houston, TX',
-      distanceKm: 4.2,
-      openNow: true,
-    ),
-    Supplier(
-      name: 'Trailer Electric Solutions',
-      specialty: 'Arneses y conectores',
-      phone: '+1 713 555 0148',
-      address: '920 Northline Dr, Houston, TX',
-      distanceKm: 6.8,
-      openNow: true,
-    ),
-    Supplier(
-      name: 'Heavy Duty Wheels Center',
-      specialty: 'Rodado y alineacion',
-      phone: '+1 713 555 0195',
-      address: '782 Market St, Houston, TX',
-      distanceKm: 12.1,
-      openNow: false,
-    ),
-  ];
-
-  void _signIn(String name, UserRole role) {
-    setState(() {
-      _currentUser = SessionUser(name: name, role: role);
-    });
+  @override
+  void initState() {
+    super.initState();
+    final apiConfig = TrailerStockApiConfig.hostinger;
+    _controller = TrailerStockController(
+      repository: apiConfig.isConfigured
+          ? VpsTrailerStockRepository(config: apiConfig)
+          : const MockTrailerStockRepository(),
+      apiConfiguration: apiConfig,
+    )..load();
   }
 
-  void _signOut() {
-    setState(() {
-      _currentUser = null;
-      _currentIndex = 0;
-    });
-  }
-
-  void _changeSection(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  void _updateInventoryFilters(String query, String category) {
-    setState(() {
-      _inventoryQuery = query;
-      _inventoryCategory = category;
-    });
-  }
-
-  void _registerMovement(MovementDraft draft) {
-    final itemIndex = _inventory.indexWhere((item) => item.sku == draft.sku);
-    if (itemIndex == -1) {
-      return;
-    }
-
-    final item = _inventory[itemIndex];
-    final newStock = switch (draft.type) {
-      MovementType.entry => item.stock + draft.quantity,
-      MovementType.exit => item.stock - draft.quantity,
-      MovementType.adjustment => draft.adjustmentSign == AdjustmentSign.plus
-          ? item.stock + draft.quantity
-          : item.stock - draft.quantity,
-      MovementType.returning => item.stock + draft.quantity,
-    };
-
-    _inventory[itemIndex] = item.copyWith(stock: newStock.clamp(0, 9999));
-
-    final movementId = 'MOV-${9000 + _movements.length + 1}';
-    final status = draft.requiresApproval
-        ? MovementStatus.pendingApproval
-        : MovementStatus.completed;
-
-    _movements.insert(
-      0,
-      MovementRecord(
-        id: movementId,
-        sku: draft.sku,
-        productName: item.name,
-        type: draft.type,
-        quantity: draft.quantity,
-        responsible: draft.responsible,
-        timestamp: DateTime.now(),
-        status: status,
-        evidenceAttached: draft.evidenceAttached,
-        notes: draft.notes,
-      ),
-    );
-
-    if (draft.requiresApproval) {
-      _approvals.insert(
-        0,
-        ApprovalRequest(
-          id: 'APR-${5000 + _approvals.length + 1}',
-          movementId: movementId,
-          productName: item.name,
-          supervisor: 'Supervisor de turno',
-          comments: draft.notes.isEmpty
-              ? 'Salida sensible generada desde modulo operativo.'
-              : draft.notes,
-          status: ApprovalStatus.pending,
-          requestedAt: DateTime.now(),
-        ),
-      );
-    }
-
-    setState(() {});
-  }
-
-  void _resolveApproval(ApprovalRequest request, bool approved) {
-    final approvalIndex = _approvals.indexWhere((item) => item.id == request.id);
-    if (approvalIndex == -1) {
-      return;
-    }
-
-    _approvals[approvalIndex] = request.copyWith(
-      status: approved ? ApprovalStatus.approved : ApprovalStatus.rejected,
-    );
-
-    final movementIndex = _movements.indexWhere((item) => item.id == request.movementId);
-    if (movementIndex != -1) {
-      _movements[movementIndex] = _movements[movementIndex].copyWith(
-        status: approved ? MovementStatus.approved : MovementStatus.rejected,
-      );
-    }
-
-    setState(() {});
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) {
-      return TrailerStockLoginScreen(
-        onLogin: _signIn,
-      );
-    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        if (_controller.isBootstrapping) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    final filteredInventory = _inventory.where((item) {
-      final matchesCategory =
-          _inventoryCategory == 'Todos' || item.category == _inventoryCategory;
-      final query = _inventoryQuery.trim().toLowerCase();
-      final matchesQuery = query.isEmpty ||
-          item.name.toLowerCase().contains(query) ||
-          item.sku.toLowerCase().contains(query) ||
-          item.category.toLowerCase().contains(query);
-      return matchesCategory && matchesQuery;
-    }).toList();
+        if (_controller.currentUser == null) {
+          return TrailerStockLoginScreen(
+            onLogin: (name, role, email, password) {
+              _controller.signIn(
+                name: name,
+                email: email,
+                password: password,
+                role: role,
+              );
+            },
+            syncStatus: _controller.apiConfiguration.isConfigured
+                ? 'Backend configurado'
+                : 'Modo demo listo para conectar VPS',
+          );
+        }
 
-    return TrailerStockShell(
-      currentUser: _currentUser!,
-      currentIndex: _currentIndex,
-      onDestinationSelected: _changeSection,
-      onSignOut: _signOut,
-      sections: [
-        DashboardPage(
-          currentUser: _currentUser!,
-          inventory: _inventory,
-          movements: _movements,
-          approvals: _approvals,
-          onOpenSection: _changeSection,
-        ),
-        InventoryPage(
-          items: filteredInventory,
-          selectedCategory: _inventoryCategory,
-          onFiltersChanged: _updateInventoryFilters,
-        ),
-        MovementsPage(
-          inventory: _inventory,
-          recentMovements: _movements.take(5).toList(),
-          currentUser: _currentUser!,
-          onRegisterMovement: _registerMovement,
-        ),
-        ApprovalsPage(
-          approvals: _approvals,
-          onResolveApproval: _resolveApproval,
-        ),
-        SuppliersPage(
-          suppliers: _suppliers,
-        ),
-      ],
+        return TrailerStockShell(
+          currentUser: _controller.currentUser!,
+          currentIndex: _controller.currentIndex,
+          onDestinationSelected: _controller.changeSection,
+          onSignOut: _controller.signOut,
+          syncStatus: _controller.apiConfiguration.isConfigured
+              ? 'Sincronizado con API'
+              : 'Esperando API VPS',
+          sections: [
+            DashboardPage(
+              currentUser: _controller.currentUser!,
+              inventory: _controller.inventory,
+              movements: _controller.movements,
+              approvals: _controller.approvals,
+              onOpenSection: _controller.changeSection,
+            ),
+            InventoryPage(
+              items: _controller.filteredInventory,
+              selectedCategory: _controller.inventoryCategory,
+              onFiltersChanged: _controller.updateInventoryFilters,
+            ),
+            MovementsPage(
+              inventory: _controller.inventory,
+              recentMovements: _controller.movements.take(5).toList(),
+              currentUser: _controller.currentUser!,
+              onRegisterMovement: _controller.registerMovement,
+            ),
+            ApprovalsPage(
+              approvals: _controller.approvals,
+              onResolveApproval: _controller.resolveApproval,
+            ),
+            SuppliersPage(suppliers: _controller.suppliers),
+          ],
+        );
+      },
     );
   }
 }
@@ -398,12 +251,16 @@ class TrailerStockLoginScreen extends StatefulWidget {
   const TrailerStockLoginScreen({
     super.key,
     required this.onLogin,
+    required this.syncStatus,
   });
 
-  final void Function(String name, UserRole role) onLogin;
+  final void Function(String name, UserRole role, String email, String password)
+  onLogin;
+  final String syncStatus;
 
   @override
-  State<TrailerStockLoginScreen> createState() => _TrailerStockLoginScreenState();
+  State<TrailerStockLoginScreen> createState() =>
+      _TrailerStockLoginScreenState();
 }
 
 class _TrailerStockLoginScreenState extends State<TrailerStockLoginScreen> {
@@ -434,135 +291,67 @@ class _TrailerStockLoginScreenState extends State<TrailerStockLoginScreen> {
       return;
     }
 
-    widget.onLogin(name, _selectedRole);
+    widget.onLogin(name, _selectedRole, email, password);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFF3F0E8),
-              Color(0xFFE5E7EB),
-              Color(0xFFDDE4EA),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+      body: TrailerStockBackdrop(
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const TrailerStockHeroLogo(),
-                        const SizedBox(height: 24),
-                        Text(
-                          'TrailerStock',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Control de almacen para taller mecanico de trailers.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 24),
-                        TextField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nombre del usuario',
-                            prefixIcon: Icon(Icons.badge_outlined),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Correo',
-                            prefixIcon: Icon(Icons.alternate_email),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Contrasena',
-                            prefixIcon: Icon(Icons.lock_outline),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        DropdownButtonFormField<UserRole>(
-                          initialValue: _selectedRole,
-                          decoration: const InputDecoration(
-                            labelText: 'Rol operativo',
-                            prefixIcon: Icon(Icons.admin_panel_settings_outlined),
-                          ),
-                          items: UserRole.values
-                              .map(
-                                (role) => DropdownMenuItem<UserRole>(
-                                  value: role,
-                                  child: Text(role.label),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 980;
+              return Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: isWide
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: _LoginBrandPanel(
+                                  selectedRole: _selectedRole,
                                 ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value == null) {
-                              return;
-                            }
-                            setState(() {
-                              _selectedRole = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 22),
-                        FilledButton.icon(
-                          onPressed: _submit,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: TrailerStockColors.industrialOrange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
+                              ),
+                              const SizedBox(width: 22),
+                              SizedBox(
+                                width: 430,
+                                child: _LoginFormCard(
+                                  nameController: _nameController,
+                                  emailController: _emailController,
+                                  passwordController: _passwordController,
+                                  selectedRole: _selectedRole,
+                                  syncStatus: widget.syncStatus,
+                                  onRoleChanged: (role) {
+                                    setState(() {
+                                      _selectedRole = role;
+                                    });
+                                  },
+                                  onSubmit: _submit,
+                                ),
+                              ),
+                            ],
+                          )
+                        : _LoginFormCard(
+                            nameController: _nameController,
+                            emailController: _emailController,
+                            passwordController: _passwordController,
+                            selectedRole: _selectedRole,
+                            syncStatus: widget.syncStatus,
+                            onRoleChanged: (role) {
+                              setState(() {
+                                _selectedRole = role;
+                              });
+                            },
+                            onSubmit: _submit,
+                            includeMobileHero: true,
                           ),
-                          icon: const Icon(Icons.login),
-                          label: const Text('Entrar al panel operativo'),
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: const [
-                            StatusChip(
-                              label: 'Inventario en tiempo real',
-                              color: TrailerStockColors.validationGreen,
-                            ),
-                            StatusChip(
-                              label: 'Aprobaciones sensibles',
-                              color: TrailerStockColors.alertRed,
-                            ),
-                            StatusChip(
-                              label: 'Mapa de proveedores',
-                              color: TrailerStockColors.steelBlue,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -577,6 +366,7 @@ class TrailerStockShell extends StatelessWidget {
     required this.currentIndex,
     required this.onDestinationSelected,
     required this.onSignOut,
+    required this.syncStatus,
     required this.sections,
   });
 
@@ -584,6 +374,7 @@ class TrailerStockShell extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onSignOut;
+  final String syncStatus;
   final List<Widget> sections;
 
   @override
@@ -620,8 +411,6 @@ class TrailerStockShell extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: TrailerStockColors.ivory,
-        surfaceTintColor: TrailerStockColors.ivory,
         titleSpacing: 20,
         title: Row(
           children: [
@@ -630,18 +419,13 @@ class TrailerStockShell extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'TrailerStock',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: TrailerStockColors.steelBlue,
-                  ),
-                ),
+                const Text('TrailerStock'),
                 Text(
                   '${currentUser.role.label} activo',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: TrailerStockColors.metalGray,
+                    color: TrailerStockColors.slate,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -649,26 +433,61 @@ class TrailerStockShell extends StatelessWidget {
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: TrailerStockColors.borderSoft),
-                ),
-                child: Text(
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: TrailerStockColors.line),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.shield_moon_outlined, size: 16),
+                const SizedBox(width: 8),
+                Text(
                   currentUser.name,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: TrailerStockColors.steelBlue,
+                    color: TrailerStockColors.ink,
                   ),
                 ),
-              ),
+              ],
             ),
           ),
+          const SizedBox(width: 8),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: TrailerStockColors.line),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  syncStatus.contains('Sincronizado')
+                      ? Icons.cloud_done_outlined
+                      : Icons.cloud_off_outlined,
+                  size: 16,
+                  color: syncStatus.contains('Sincronizado')
+                      ? TrailerStockColors.validationGreen
+                      : TrailerStockColors.industrialOrange,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  syncStatus,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: TrailerStockColors.ink,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           IconButton(
             onPressed: onSignOut,
             tooltip: 'Cerrar sesion',
@@ -677,41 +496,90 @@ class TrailerStockShell extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: Row(
-        children: [
-          if (isWide)
-            NavigationRail(
-              minWidth: 88,
-              labelType: NavigationRailLabelType.all,
-              selectedIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-              leading: const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Icon(
-                  Icons.precision_manufacturing_outlined,
-                  color: TrailerStockColors.industrialOrange,
-                  size: 34,
+      body: TrailerStockBackdrop(
+        child: Row(
+          children: [
+            if (isWide)
+              Container(
+                width: 108,
+                margin: const EdgeInsets.fromLTRB(16, 12, 0, 18),
+                decoration: BoxDecoration(
+                  color: TrailerStockColors.ink,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: const Color(0xFF26394F)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x16000000),
+                      blurRadius: 28,
+                      offset: Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: NavigationRail(
+                  backgroundColor: Colors.transparent,
+                  indicatorColor: Colors.white.withValues(alpha: 0.12),
+                  minWidth: 96,
+                  labelType: NavigationRailLabelType.all,
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: onDestinationSelected,
+                  leading: const Padding(
+                    padding: EdgeInsets.only(top: 18),
+                    child: Icon(
+                      Icons.precision_manufacturing_outlined,
+                      color: TrailerStockColors.industrialOrange,
+                      size: 36,
+                    ),
+                  ),
+                  destinations: destinations
+                      .map(
+                        (destination) => NavigationRailDestination(
+                          icon: destination.icon,
+                          selectedIcon: destination.selectedIcon,
+                          label: Text(destination.label),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
-              destinations: destinations
-                  .map(
-                    (destination) => NavigationRailDestination(
-                      icon: destination.icon,
-                      selectedIcon: destination.selectedIcon,
-                      label: Text(destination.label),
-                    ),
-                  )
-                  .toList(),
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.fromLTRB(
+                  isWide ? 18 : 0,
+                  12,
+                  16,
+                  isWide ? 18 : 0,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.58),
+                  borderRadius: BorderRadius.circular(34),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.64),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(34),
+                  child: sections[currentIndex],
+                ),
+              ),
             ),
-          Expanded(child: sections[currentIndex]),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: isWide
           ? null
-          : NavigationBar(
-              selectedIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-              destinations: destinations,
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: NavigationBar(
+                    selectedIndex: currentIndex,
+                    onDestinationSelected: onDestinationSelected,
+                    destinations: destinations,
+                  ),
+                ),
+              ),
             ),
     );
   }
@@ -735,10 +603,13 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final criticalStock = inventory.where((item) => item.stock <= item.minimumStock).length;
+    final criticalStock = inventory
+        .where((item) => item.stock <= item.minimumStock)
+        .length;
     final totalStock = inventory.fold<int>(0, (sum, item) => sum + item.stock);
-    final pendingApprovals =
-        approvals.where((item) => item.status == ApprovalStatus.pending).length;
+    final pendingApprovals = approvals
+        .where((item) => item.status == ApprovalStatus.pending)
+        .length;
     final todaysMovements = movements.where((item) {
       final now = DateTime.now();
       return item.timestamp.year == now.year &&
@@ -765,7 +636,9 @@ class DashboardPage extends StatelessWidget {
                 runSpacing: 14,
                 children: [
                   MetricCard(
-                    width: compact ? constraints.maxWidth : (constraints.maxWidth - 14) / 2,
+                    width: compact
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 14) / 2,
                     label: 'Existencias totales',
                     value: '$totalStock piezas',
                     detail: 'Stock disponible en almacen',
@@ -773,7 +646,9 @@ class DashboardPage extends StatelessWidget {
                     icon: Icons.inventory_2_outlined,
                   ),
                   MetricCard(
-                    width: compact ? constraints.maxWidth : (constraints.maxWidth - 14) / 2,
+                    width: compact
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 14) / 2,
                     label: 'Movimientos de hoy',
                     value: '$todaysMovements',
                     detail: 'Entradas, salidas y ajustes registrados',
@@ -781,7 +656,9 @@ class DashboardPage extends StatelessWidget {
                     icon: Icons.compare_arrows_outlined,
                   ),
                   MetricCard(
-                    width: compact ? constraints.maxWidth : (constraints.maxWidth - 14) / 2,
+                    width: compact
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 14) / 2,
                     label: 'Alertas de stock minimo',
                     value: '$criticalStock productos',
                     detail: 'Requieren reposicion inmediata',
@@ -789,7 +666,9 @@ class DashboardPage extends StatelessWidget {
                     icon: Icons.warning_amber_rounded,
                   ),
                   MetricCard(
-                    width: compact ? constraints.maxWidth : (constraints.maxWidth - 14) / 2,
+                    width: compact
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 14) / 2,
                     label: 'Solicitudes por aprobar',
                     value: '$pendingApprovals',
                     detail: 'Salidas sensibles pendientes',
@@ -898,9 +777,14 @@ class _InventoryPageState extends State<InventoryPage> {
                     return ChoiceChip(
                       label: Text(category),
                       selected: selected,
-                      selectedColor: TrailerStockColors.steelBlue.withValues(alpha: 0.12),
+                      selectedColor: TrailerStockColors.steelBlue.withValues(
+                        alpha: 0.12,
+                      ),
                       onSelected: (_) {
-                        widget.onFiltersChanged(_searchController.text, category);
+                        widget.onFiltersChanged(
+                          _searchController.text,
+                          category,
+                        );
                       },
                     );
                   }).toList(),
@@ -957,7 +841,9 @@ class _MovementsPageState extends State<MovementsPage> {
   @override
   void initState() {
     super.initState();
-    _selectedSku = widget.inventory.isNotEmpty ? widget.inventory.first.sku : null;
+    _selectedSku = widget.inventory.isNotEmpty
+        ? widget.inventory.first.sku
+        : null;
     _responsibleController.text = widget.currentUser.name;
   }
 
@@ -971,7 +857,9 @@ class _MovementsPageState extends State<MovementsPage> {
 
   void _submit() {
     final quantity = int.tryParse(_quantityController.text.trim()) ?? 0;
-    if (_selectedSku == null || quantity <= 0 || _responsibleController.text.trim().isEmpty) {
+    if (_selectedSku == null ||
+        quantity <= 0 ||
+        _responsibleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selecciona producto, cantidad valida y responsable.'),
@@ -1125,7 +1013,9 @@ class _MovementsPageState extends State<MovementsPage> {
                   children: [
                     FilterChip(
                       label: Text(
-                        _evidenceAttached ? 'Evidencia adjunta' : 'Adjuntar evidencia',
+                        _evidenceAttached
+                            ? 'Evidencia adjunta'
+                            : 'Adjuntar evidencia',
                       ),
                       avatar: Icon(
                         _evidenceAttached
@@ -1197,8 +1087,12 @@ class ApprovalsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pending = approvals.where((item) => item.status == ApprovalStatus.pending).toList();
-    final resolved = approvals.where((item) => item.status != ApprovalStatus.pending).toList();
+    final pending = approvals
+        .where((item) => item.status == ApprovalStatus.pending)
+        .toList();
+    final resolved = approvals
+        .where((item) => item.status != ApprovalStatus.pending)
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -1256,10 +1150,7 @@ class ApprovalsPage extends StatelessWidget {
 }
 
 class SuppliersPage extends StatefulWidget {
-  const SuppliersPage({
-    super.key,
-    required this.suppliers,
-  });
+  const SuppliersPage({super.key, required this.suppliers});
 
   final List<Supplier> suppliers;
 
@@ -1315,7 +1206,9 @@ class _SuppliersPageState extends State<SuppliersPage> {
               onRoute: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Abrir ruta hacia ${supplier.name} en Google Maps.'),
+                    content: Text(
+                      'Abrir ruta hacia ${supplier.name} en Google Maps.',
+                    ),
                   ),
                 );
               },
@@ -1341,118 +1234,259 @@ class DashboardHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: [
-            TrailerStockColors.steelBlue,
-            Color(0xFF244A72),
-            Color(0xFF2F6A74),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 640;
+
+        return Container(
+          padding: EdgeInsets.all(isCompact ? 20 : 24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0E2237), Color(0xFF19344F), Color(0xFF1C4B55)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1E102033),
+                blurRadius: 30,
+                offset: Offset(0, 20),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bienvenido, ${currentUser.name.split(' ').first}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isCompact ? 26 : 30,
+                            fontWeight: FontWeight.w800,
+                            height: 1.04,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Un centro operativo para piezas, movimientos, alertas criticas y decisiones de supervisor.',
+                          style: TextStyle(
+                            color: Color(0xFFE7EDF4),
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: const [
+                            StatusChip(
+                              label: 'Taller TEAM GMD',
+                              color: Color(0xFFE4ECF5),
+                              filledTextDark: true,
+                            ),
+                            StatusChip(
+                              label: 'Modo taller',
+                              color: TrailerStockColors.industrialOrange,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Container(
+                    width: isCompact ? 70 : 78,
+                    height: isCompact ? 70 : 78,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.local_shipping_outlined,
+                          color: Colors.white,
+                          size: 34,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'GMD',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => onOpenSection(1),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: TrailerStockColors.steelBlue,
+                    ),
+                    icon: const Icon(Icons.search),
+                    label: const Text('Consultar inventario'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => onOpenSection(2),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white54),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Registrar movimiento'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              if (isCompact) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFF7D56C),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          criticalStock == 0
+                              ? 'No hay piezas en stock critico. Operacion estable.'
+                              : '$criticalStock productos ya llegaron a stock minimo.',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Alertas criticas',
+                          style: TextStyle(
+                            color: Color(0xFFAEC0D3),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$criticalStock',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else
+                Row(
                   children: [
-                    Text(
-                      'Bienvenido, ${currentUser.name.split(' ').first}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Color(0xFFF7D56C),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                criticalStock == 0
+                                    ? 'No hay piezas en stock critico. Operacion estable.'
+                                    : '$criticalStock productos ya llegaron a stock minimo.',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Supervisa inventario, trazabilidad de movimientos y proveedores desde un solo panel.',
-                      style: TextStyle(
-                        color: Color(0xFFE7EDF4),
-                        height: 1.5,
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 124,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Alertas',
+                            style: TextStyle(
+                              color: Color(0xFFAEC0D3),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$criticalStock',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 14),
-              Container(
-                width: 78,
-                height: 78,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Icon(
-                  Icons.local_shipping_outlined,
-                  color: Colors.white,
-                  size: 38,
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              FilledButton.tonalIcon(
-                onPressed: () => onOpenSection(1),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: TrailerStockColors.steelBlue,
-                ),
-                icon: const Icon(Icons.search),
-                label: const Text('Consultar inventario'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => onOpenSection(2),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white54),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.add_a_photo_outlined),
-                label: const Text('Registrar movimiento'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Color(0xFFF7D56C),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    criticalStock == 0
-                        ? 'No hay piezas en stock critico. Operacion estable.'
-                        : '$criticalStock productos ya llegaron a stock minimo.',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1481,30 +1515,46 @@ class MetricCard extends StatelessWidget {
       width: width,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: accent.withValues(alpha: 0.12),
-                child: Icon(icon, color: accent),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: accent.withValues(alpha: 0.12),
+                    child: Icon(icon, color: accent),
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: 42,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: LinearGradient(
+                        colors: [accent, accent.withValues(alpha: 0.18)],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               Text(
                 label,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: TrailerStockColors.steelBlue,
+                  color: TrailerStockColors.slate,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: TrailerStockColors.steelBlue,
+                  color: TrailerStockColors.ink,
+                  letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 6),
@@ -1535,47 +1585,95 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stackHeader = constraints.maxWidth < 520;
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Column(
+                if (stackHeader) ...[
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: Theme.of(context).textTheme.titleLarge),
+                      const Text(
+                        'OPERACION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          color: TrailerStockColors.industrialOrange,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       const SizedBox(height: 6),
                       Text(subtitle),
+                      if (actionLabel != null && onAction != null) ...[
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: onAction,
+                            child: Text(actionLabel!),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                ),
-                if (actionLabel != null && onAction != null)
-                  TextButton(
-                    onPressed: onAction,
-                    child: Text(actionLabel!),
+                ] else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'OPERACION',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                                color: TrailerStockColors.industrialOrange,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              title,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(subtitle),
+                          ],
+                        ),
+                      ),
+                      if (actionLabel != null && onAction != null)
+                        TextButton(
+                          onPressed: onAction,
+                          child: Text(actionLabel!),
+                        ),
+                    ],
                   ),
+                const SizedBox(height: 18),
+                child,
               ],
             ),
-            const SizedBox(height: 18),
-            child,
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
 class SectionIntro extends StatelessWidget {
-  const SectionIntro({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
+  const SectionIntro({super.key, required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -1585,6 +1683,16 @@ class SectionIntro extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text(
+          'CONTROL INDUSTRIAL',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.3,
+            color: TrailerStockColors.industrialOrange,
+          ),
+        ),
+        const SizedBox(height: 10),
         Text(title, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),
         Text(subtitle),
@@ -1594,10 +1702,7 @@ class SectionIntro extends StatelessWidget {
 }
 
 class MovementTile extends StatelessWidget {
-  const MovementTile({
-    super.key,
-    required this.movement,
-  });
+  const MovementTile({super.key, required this.movement});
 
   final MovementRecord movement;
 
@@ -1609,7 +1714,8 @@ class MovementTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: TrailerStockColors.surfaceGray,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: TrailerStockColors.line),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1650,9 +1756,22 @@ class MovementTile extends StatelessWidget {
                     '${movement.type.label} • ${movement.quantity} pzs • ${movement.responsible}',
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    movement.notes,
-                    style: const TextStyle(fontSize: 12),
+                  Text(movement.notes, style: const TextStyle(fontSize: 12)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _MetaPill(icon: Icons.qr_code_2, label: movement.sku),
+                      _MetaPill(
+                        icon: movement.evidenceAttached
+                            ? Icons.photo_camera
+                            : Icons.photo_camera_back_outlined,
+                        label: movement.evidenceAttached
+                            ? 'Con evidencia'
+                            : 'Sin evidencia',
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1665,10 +1784,7 @@ class MovementTile extends StatelessWidget {
 }
 
 class InventoryCard extends StatelessWidget {
-  const InventoryCard({
-    super.key,
-    required this.item,
-  });
+  const InventoryCard({super.key, required this.item});
 
   final InventoryItem item;
 
@@ -1679,7 +1795,7 @@ class InventoryCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             Row(
@@ -1696,11 +1812,25 @@ class InventoryCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: TrailerStockColors.steelBlue,
+                          color: TrailerStockColors.ink,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text('${item.sku} • ${item.category} • ${item.location}'),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _MetaPill(icon: Icons.qr_code_2, label: item.sku),
+                          _MetaPill(
+                            icon: Icons.layers_outlined,
+                            label: item.category,
+                          ),
+                          _MetaPill(
+                            icon: Icons.place_outlined,
+                            label: item.location,
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
@@ -1733,6 +1863,34 @@ class InventoryCard extends StatelessWidget {
                   : TrailerStockColors.validationGreen,
               borderRadius: BorderRadius.circular(999),
             ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    lowStock
+                        ? 'Accion sugerida: reabastecer o revisar proveedor.'
+                        : 'Disponibilidad saludable para operacion actual.',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: TrailerStockColors.slate,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(
+                    lowStock ? Icons.priority_high : Icons.check_circle_outline,
+                    color: lowStock
+                        ? TrailerStockColors.alertRed
+                        : TrailerStockColors.validationGreen,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1755,11 +1913,14 @@ class SupplierCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
+            Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Container(
                   width: 54,
@@ -1773,8 +1934,11 @@ class SupplierCard extends StatelessWidget {
                     color: TrailerStockColors.steelBlue,
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 160,
+                    maxWidth: 320,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1782,7 +1946,7 @@ class SupplierCard extends StatelessWidget {
                         supplier.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
-                          color: TrailerStockColors.steelBlue,
+                          color: TrailerStockColors.ink,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1799,9 +1963,71 @@ class SupplierCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
+            Container(
+              height: 118,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10253C), Color(0xFF1E395A)],
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -12,
+                    top: -8,
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.06),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Vista de ruta',
+                            style: TextStyle(
+                              color: Color(0xFFBAC8D9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              const Icon(Icons.route, color: Colors.white),
+                              Text(
+                                '${supplier.distanceKm.toStringAsFixed(1)} km desde taller',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
             Text(supplier.address),
             const SizedBox(height: 6),
-            Text('${supplier.phone} • ${supplier.distanceKm.toStringAsFixed(1)} km'),
+            Text(
+              '${supplier.phone} • ${supplier.distanceKm.toStringAsFixed(1)} km',
+            ),
             const SizedBox(height: 16),
             FilledButton.tonalIcon(
               onPressed: onRoute,
@@ -1839,7 +2065,12 @@ class ApprovalTile extends StatelessWidget {
           color: request.status == ApprovalStatus.pending
               ? TrailerStockColors.industrialOrange.withValues(alpha: 0.08)
               : TrailerStockColors.surfaceGray,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: request.status == ApprovalStatus.pending
+                ? TrailerStockColors.industrialOrange.withValues(alpha: 0.22)
+                : TrailerStockColors.line,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1865,7 +2096,25 @@ class ApprovalTile extends StatelessWidget {
             Text('Supervisor: ${request.supervisor}'),
             const SizedBox(height: 4),
             Text(request.comments),
-            if (!compactActions && request.status == ApprovalStatus.pending) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MetaPill(
+                  icon: Icons.receipt_long_outlined,
+                  label: request.movementId,
+                ),
+                _MetaPill(
+                  icon: Icons.schedule_outlined,
+                  label: request.status == ApprovalStatus.pending
+                      ? 'Requiere decision'
+                      : 'Bitacora cerrada',
+                ),
+              ],
+            ),
+            if (!compactActions &&
+                request.status == ApprovalStatus.pending) ...[
               const SizedBox(height: 14),
               Wrap(
                 spacing: 10,
@@ -1918,7 +2167,9 @@ class EmptyStateCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: TrailerStockColors.steelBlue.withValues(alpha: 0.10),
+            backgroundColor: TrailerStockColors.steelBlue.withValues(
+              alpha: 0.10,
+            ),
             child: Icon(icon, color: TrailerStockColors.steelBlue),
           ),
           const SizedBox(height: 12),
@@ -1930,10 +2181,7 @@ class EmptyStateCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-          ),
+          Text(subtitle, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -1945,14 +2193,17 @@ class StatusChip extends StatelessWidget {
     super.key,
     required this.label,
     required this.color,
+    this.filledTextDark = false,
   });
 
   final String label;
   final Color color;
+  final bool filledTextDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 34, maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
@@ -1960,8 +2211,10 @@ class StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: color,
+          color: filledTextDark ? TrailerStockColors.ink : color,
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
@@ -1971,10 +2224,7 @@ class StatusChip extends StatelessWidget {
 }
 
 class InventoryAvatar extends StatelessWidget {
-  const InventoryAvatar({
-    super.key,
-    required this.label,
-  });
+  const InventoryAvatar({super.key, required this.label});
 
   final String label;
 
@@ -2008,6 +2258,427 @@ class InventoryAvatar extends StatelessWidget {
   }
 }
 
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 240),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: TrailerStockColors.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: TrailerStockColors.slate),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: TrailerStockColors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoginBrandPanel extends StatelessWidget {
+  const _LoginBrandPanel({required this.selectedRole});
+
+  final UserRole selectedRole;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 680),
+      padding: const EdgeInsets.all(34),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(40),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D2136), Color(0xFF132F46), Color(0xFF1E4D57)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x220A1624),
+            blurRadius: 40,
+            offset: Offset(0, 24),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const TrailerStockHeroLogo(),
+          const SizedBox(height: 30),
+          const Text(
+            'ALMACEN DE TRAILERS',
+            style: TextStyle(
+              color: Color(0xFFB2C6D8),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.6,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Un tablero tactico para inventario, salidas sensibles y trazabilidad del taller.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 36,
+              height: 1.08,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1.1,
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'La propuesta ahora se siente como software operativo real: clara, densa cuando debe serlo y con una presencia visual mucho mas premium.',
+            style: TextStyle(
+              color: Color(0xFFD8E2EE),
+              fontSize: 15,
+              height: 1.65,
+            ),
+          ),
+          const SizedBox(height: 28),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              const StatusChip(
+                label: 'Trazabilidad',
+                color: TrailerStockColors.industrialOrange,
+              ),
+              const StatusChip(
+                label: 'Stock critico',
+                color: TrailerStockColors.alertRed,
+              ),
+              StatusChip(
+                label: selectedRole.label,
+                color: const Color(0xFFDDE7F1),
+                filledTextDark: true,
+              ),
+            ],
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: const Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: [
+                SizedBox(
+                  width: 120,
+                  child: _BrandMetric(label: 'Refacciones', value: '148'),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: _BrandMetric(label: 'Aprobaciones', value: '07'),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: _BrandMetric(label: 'Proveedores', value: '19'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BrandMetric extends StatelessWidget {
+  const _BrandMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.8,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFB2C6D8),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoginFormCard extends StatelessWidget {
+  const _LoginFormCard({
+    required this.nameController,
+    required this.emailController,
+    required this.passwordController,
+    required this.selectedRole,
+    required this.syncStatus,
+    required this.onRoleChanged,
+    required this.onSubmit,
+    this.includeMobileHero = false,
+  });
+
+  final TextEditingController nameController;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final UserRole selectedRole;
+  final String syncStatus;
+  final ValueChanged<UserRole> onRoleChanged;
+  final VoidCallback onSubmit;
+  final bool includeMobileHero;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (includeMobileHero) ...[
+              const TrailerStockHeroLogo(),
+              const SizedBox(height: 20),
+            ],
+            const Text(
+              'Acceso operativo',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.3,
+                color: TrailerStockColors.industrialOrange,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Entra al sistema',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Gestiona inventario, movimientos y aprobaciones desde una sola interfaz.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: TrailerStockColors.surfaceGray,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: TrailerStockColors.line),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    syncStatus.contains('Backend')
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_sync_outlined,
+                    size: 18,
+                    color: syncStatus.contains('Backend')
+                        ? TrailerStockColors.validationGreen
+                        : TrailerStockColors.industrialOrange,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      syncStatus,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: TrailerStockColors.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del usuario',
+                prefixIcon: Icon(Icons.badge_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Correo',
+                prefixIcon: Icon(Icons.alternate_email),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Contrasena',
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<UserRole>(
+              initialValue: selectedRole,
+              decoration: const InputDecoration(
+                labelText: 'Rol operativo',
+                prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+              ),
+              items: UserRole.values
+                  .map(
+                    (role) => DropdownMenuItem<UserRole>(
+                      value: role,
+                      child: Text(role.label),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  onRoleChanged(value);
+                }
+              },
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onSubmit,
+              icon: const Icon(Icons.login),
+              label: const Text('Entrar al panel operativo'),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: const [
+                StatusChip(
+                  label: 'Inventario en tiempo real',
+                  color: TrailerStockColors.validationGreen,
+                ),
+                StatusChip(
+                  label: 'Aprobaciones sensibles',
+                  color: TrailerStockColors.alertRed,
+                ),
+                StatusChip(
+                  label: 'Mapa de proveedores',
+                  color: TrailerStockColors.steelBlue,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TrailerStockBackdrop extends StatelessWidget {
+  const TrailerStockBackdrop({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF7F3EA), Color(0xFFEAEFF4), Color(0xFFE6EBEE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -120,
+            left: -80,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: TrailerStockColors.industrialOrange.withValues(
+                  alpha: 0.05,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            right: -60,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: TrailerStockColors.steelBlue.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(child: CustomPaint(painter: _GridPainter())),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = TrailerStockColors.line.withValues(alpha: 0.35)
+      ..strokeWidth = 1;
+
+    const gap = 36.0;
+    for (double x = 0; x < size.width; x += gap) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += gap) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class TrailerStockHeroLogo extends StatelessWidget {
   const TrailerStockHeroLogo({super.key});
 
@@ -2020,10 +2691,7 @@ class TrailerStockHeroLogo extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           gradient: const LinearGradient(
-            colors: [
-              TrailerStockColors.steelBlue,
-              Color(0xFF2A4C73),
-            ],
+            colors: [TrailerStockColors.steelBlue, Color(0xFF2A4C73)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -2038,11 +2706,7 @@ class TrailerStockHeroLogo extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: const [
-            Icon(
-              Icons.settings,
-              size: 58,
-              color: Color(0x22FFFFFF),
-            ),
+            Icon(Icons.settings, size: 58, color: Color(0x22FFFFFF)),
             Positioned(
               bottom: 26,
               child: Icon(
@@ -2088,237 +2752,9 @@ class TrailerStockColors {
   static const alertRed = Color(0xFFB42318);
   static const borderSoft = Color(0xFFE3E5E8);
   static const surfaceGray = Color(0xFFF7F6F2);
-}
-
-class SessionUser {
-  const SessionUser({
-    required this.name,
-    required this.role,
-  });
-
-  final String name;
-  final UserRole role;
-}
-
-enum UserRole {
-  admin('Administrador'),
-  storekeeper('Almacenista'),
-  supervisor('Supervisor');
-
-  const UserRole(this.label);
-  final String label;
-}
-
-class InventoryItem {
-  const InventoryItem({
-    required this.sku,
-    required this.name,
-    required this.category,
-    required this.unit,
-    required this.location,
-    required this.stock,
-    required this.minimumStock,
-    required this.imageLabel,
-  });
-
-  final String sku;
-  final String name;
-  final String category;
-  final String unit;
-  final String location;
-  final int stock;
-  final int minimumStock;
-  final String imageLabel;
-
-  InventoryItem copyWith({
-    String? sku,
-    String? name,
-    String? category,
-    String? unit,
-    String? location,
-    int? stock,
-    int? minimumStock,
-    String? imageLabel,
-  }) {
-    return InventoryItem(
-      sku: sku ?? this.sku,
-      name: name ?? this.name,
-      category: category ?? this.category,
-      unit: unit ?? this.unit,
-      location: location ?? this.location,
-      stock: stock ?? this.stock,
-      minimumStock: minimumStock ?? this.minimumStock,
-      imageLabel: imageLabel ?? this.imageLabel,
-    );
-  }
-}
-
-enum MovementType {
-  entry('Entrada', TrailerStockColors.validationGreen, Icons.south_west),
-  exit('Salida', TrailerStockColors.alertRed, Icons.north_east),
-  adjustment('Ajuste', TrailerStockColors.industrialOrange, Icons.tune),
-  returning('Devolucion', TrailerStockColors.steelBlue, Icons.assignment_return);
-
-  const MovementType(this.label, this.color, this.icon);
-  final String label;
-  final Color color;
-  final IconData icon;
-}
-
-enum AdjustmentSign {
-  plus,
-  minus,
-}
-
-enum MovementStatus {
-  completed('Registrado', TrailerStockColors.validationGreen),
-  pendingApproval('Pendiente', TrailerStockColors.industrialOrange),
-  approved('Aprobado', TrailerStockColors.steelBlue),
-  rejected('Rechazado', TrailerStockColors.alertRed);
-
-  const MovementStatus(this.label, this.color);
-  final String label;
-  final Color color;
-}
-
-class MovementRecord {
-  const MovementRecord({
-    required this.id,
-    required this.sku,
-    required this.productName,
-    required this.type,
-    required this.quantity,
-    required this.responsible,
-    required this.timestamp,
-    required this.status,
-    required this.evidenceAttached,
-    required this.notes,
-  });
-
-  final String id;
-  final String sku;
-  final String productName;
-  final MovementType type;
-  final int quantity;
-  final String responsible;
-  final DateTime timestamp;
-  final MovementStatus status;
-  final bool evidenceAttached;
-  final String notes;
-
-  MovementRecord copyWith({
-    String? id,
-    String? sku,
-    String? productName,
-    MovementType? type,
-    int? quantity,
-    String? responsible,
-    DateTime? timestamp,
-    MovementStatus? status,
-    bool? evidenceAttached,
-    String? notes,
-  }) {
-    return MovementRecord(
-      id: id ?? this.id,
-      sku: sku ?? this.sku,
-      productName: productName ?? this.productName,
-      type: type ?? this.type,
-      quantity: quantity ?? this.quantity,
-      responsible: responsible ?? this.responsible,
-      timestamp: timestamp ?? this.timestamp,
-      status: status ?? this.status,
-      evidenceAttached: evidenceAttached ?? this.evidenceAttached,
-      notes: notes ?? this.notes,
-    );
-  }
-}
-
-class MovementDraft {
-  const MovementDraft({
-    required this.sku,
-    required this.type,
-    required this.quantity,
-    required this.responsible,
-    required this.notes,
-    required this.requiresApproval,
-    required this.evidenceAttached,
-    required this.adjustmentSign,
-  });
-
-  final String sku;
-  final MovementType type;
-  final int quantity;
-  final String responsible;
-  final String notes;
-  final bool requiresApproval;
-  final bool evidenceAttached;
-  final AdjustmentSign adjustmentSign;
-}
-
-enum ApprovalStatus {
-  pending('Pendiente', TrailerStockColors.industrialOrange),
-  approved('Aprobado', TrailerStockColors.validationGreen),
-  rejected('Rechazado', TrailerStockColors.alertRed);
-
-  const ApprovalStatus(this.label, this.color);
-  final String label;
-  final Color color;
-}
-
-class ApprovalRequest {
-  const ApprovalRequest({
-    required this.id,
-    required this.movementId,
-    required this.productName,
-    required this.supervisor,
-    required this.comments,
-    required this.status,
-    required this.requestedAt,
-  });
-
-  final String id;
-  final String movementId;
-  final String productName;
-  final String supervisor;
-  final String comments;
-  final ApprovalStatus status;
-  final DateTime requestedAt;
-
-  ApprovalRequest copyWith({
-    String? id,
-    String? movementId,
-    String? productName,
-    String? supervisor,
-    String? comments,
-    ApprovalStatus? status,
-    DateTime? requestedAt,
-  }) {
-    return ApprovalRequest(
-      id: id ?? this.id,
-      movementId: movementId ?? this.movementId,
-      productName: productName ?? this.productName,
-      supervisor: supervisor ?? this.supervisor,
-      comments: comments ?? this.comments,
-      status: status ?? this.status,
-      requestedAt: requestedAt ?? this.requestedAt,
-    );
-  }
-}
-
-class Supplier {
-  const Supplier({
-    required this.name,
-    required this.specialty,
-    required this.phone,
-    required this.address,
-    required this.distanceKm,
-    required this.openNow,
-  });
-
-  final String name;
-  final String specialty;
-  final String phone;
-  final String address;
-  final double distanceKm;
-  final bool openNow;
+  static const canvas = Color(0xFFF4F1E8);
+  static const paper = Color(0xFFFFFCF7);
+  static const ink = Color(0xFF132236);
+  static const slate = Color(0xFF5D6978);
+  static const line = Color(0xFFD7DDE4);
 }

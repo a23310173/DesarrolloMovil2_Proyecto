@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Backend local / secrets
+/backend/hostinger_api/db_config.php
+/lib/trailer_stock_api_config.local.dart

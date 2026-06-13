@@ -25,7 +25,13 @@ La interfaz usa la paleta definida en la propuesta:
 ## Estructura actual
 
 - `lib/main.dart`: aplicacion principal y modulos UI
+- `lib/trailer_stock_api_config.dart`: URL base del API de Hostinger
+- `lib/trailer_stock_models.dart`: modelos del dominio
+- `lib/trailer_stock_data.dart`: controlador, repositorio mock y configuracion API
+- `lib/trailer_stock_vps_repository.dart`: stub del repositorio real para la VPS
+- `backend/hostinger_api`: API PHP lista para Hostinger
 - `test/widget_test.dart`: prueba basica de la pantalla de acceso
+- `BACKEND_VPS_SETUP.md`: contrato inicial para conectar tu VPS despues
 
 ## Probar manualmente
 
