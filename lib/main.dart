@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'trailer_stock_api_config.dart';
 import 'trailer_stock_data.dart';
@@ -1160,11 +1162,47 @@ class SuppliersPage extends StatefulWidget {
 
 class _SuppliersPageState extends State<SuppliersPage> {
   final _searchController = TextEditingController();
+  String? _selectedSupplierName;
+  GoogleMapController? _mapController;
 
   @override
   void dispose() {
+    _mapController?.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _focusSupplier(Supplier supplier) async {
+    setState(() {
+      _selectedSupplierName = supplier.name;
+    });
+
+    await _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(supplier.latitude, supplier.longitude),
+          zoom: 13.4,
+          tilt: 20,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSupplierNavigation(Supplier supplier) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${supplier.latitude},${supplier.longitude}&travelmode=driving',
+    );
+
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo abrir la ruta para ${supplier.name}.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -1175,6 +1213,12 @@ class _SuppliersPageState extends State<SuppliersPage> {
           supplier.name.toLowerCase().contains(query) ||
           supplier.specialty.toLowerCase().contains(query);
     }).toList();
+    final activeSupplier = suppliers.isNotEmpty
+        ? suppliers.firstWhere(
+            (supplier) => supplier.name == _selectedSupplierName,
+            orElse: () => suppliers.first,
+          )
+        : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -1184,7 +1228,7 @@ class _SuppliersPageState extends State<SuppliersPage> {
           const SectionIntro(
             title: 'Proveedores y mapa',
             subtitle:
-                'Encuentra refacciones cercanas y prepara la salida a ruta desde el taller.',
+                'Encuentra refacciones cercanas y visualiza su ubicacion real dentro del tablero.',
           ),
           const SizedBox(height: 18),
           SectionCard(
@@ -1200,18 +1244,282 @@ class _SuppliersPageState extends State<SuppliersPage> {
             ),
           ),
           const SizedBox(height: 18),
+          if (activeSupplier != null) ...[
+            SectionCard(
+              title: 'Mapa operativo',
+              subtitle:
+                  'Selecciona un proveedor para enfocar su ubicacion y validar distancia al taller.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEFF4FA), Color(0xFFF8F4EA)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: TrailerStockColors.line),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: SizedBox(
+                        height: 320,
+                        child: Stack(
+                          children: [
+                            GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(
+                                  activeSupplier.latitude,
+                                  activeSupplier.longitude,
+                                ),
+                                zoom: 11.8,
+                              ),
+                              myLocationButtonEnabled: false,
+                              zoomControlsEnabled: false,
+                              mapToolbarEnabled: false,
+                              compassEnabled: false,
+                              onMapCreated: (controller) {
+                                _mapController = controller;
+                              },
+                              markers: suppliers
+                                  .map(
+                                    (supplier) => Marker(
+                                      markerId: MarkerId(supplier.name),
+                                      position: LatLng(
+                                        supplier.latitude,
+                                        supplier.longitude,
+                                      ),
+                                      onTap: () => _focusSupplier(supplier),
+                                      infoWindow: InfoWindow(
+                                        title: supplier.name,
+                                        snippet: supplier.address,
+                                      ),
+                                      icon:
+                                          BitmapDescriptor.defaultMarkerWithHue(
+                                            supplier.name == activeSupplier.name
+                                                ? BitmapDescriptor.hueOrange
+                                                : BitmapDescriptor.hueAzure,
+                                          ),
+                                    ),
+                                  )
+                                  .toSet(),
+                            ),
+                            Positioned(
+                              left: 14,
+                              top: 14,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: TrailerStockColors.ink.withValues(
+                                    alpha: 0.86,
+                                  ),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Proveedor activo',
+                                      style: TextStyle(
+                                        color: Color(0xFFB9C7D6),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 180,
+                                      ),
+                                      child: Text(
+                                        activeSupplier.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.15,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right: 14,
+                              top: 14,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.route_outlined,
+                                      size: 16,
+                                      color: TrailerStockColors.steelBlue,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${activeSupplier.distanceKm.toStringAsFixed(1)} km',
+                                      style: const TextStyle(
+                                        color: TrailerStockColors.ink,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 52,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: suppliers.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final supplier = suppliers[index];
+                        final isSelected = supplier.name == activeSupplier.name;
+
+                        return InkWell(
+                          onTap: () => _focusSupplier(supplier),
+                          borderRadius: BorderRadius.circular(18),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? TrailerStockColors.steelBlue
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: isSelected
+                                    ? TrailerStockColors.steelBlue
+                                    : TrailerStockColors.line,
+                              ),
+                              boxShadow: isSelected
+                                  ? const [
+                                      BoxShadow(
+                                        color: Color(0x1F16324F),
+                                        blurRadius: 18,
+                                        offset: Offset(0, 10),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.location_on_outlined,
+                                  size: 16,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : TrailerStockColors.steelBlue,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  supplier.name,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : TrailerStockColors.ink,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      StatusChip(
+                        label: activeSupplier.name,
+                        color: TrailerStockColors.steelBlue,
+                      ),
+                      StatusChip(
+                        label:
+                            '${activeSupplier.distanceKm.toStringAsFixed(1)} km',
+                        color: TrailerStockColors.industrialOrange,
+                      ),
+                      StatusChip(
+                        label: activeSupplier.openNow
+                            ? 'Abierto ahora'
+                            : 'Cerrado',
+                        color: activeSupplier.openNow
+                            ? TrailerStockColors.validationGreen
+                            : TrailerStockColors.metalGray,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    activeSupplier.address,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () =>
+                            _openSupplierNavigation(activeSupplier),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: TrailerStockColors.steelBlue,
+                        ),
+                        icon: const Icon(Icons.navigation_outlined),
+                        label: const Text('Navegar ahora'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _focusSupplier(activeSupplier),
+                        icon: const Icon(Icons.center_focus_strong),
+                        label: const Text('Reenfocar mapa'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           ...suppliers.map((supplier) {
             return SupplierCard(
               supplier: supplier,
-              onRoute: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Abrir ruta hacia ${supplier.name} en Google Maps.',
-                    ),
-                  ),
-                );
-              },
+              isSelected: supplier.name == activeSupplier?.name,
+              onRoute: () => _focusSupplier(supplier),
+              onNavigate: () => _openSupplierNavigation(supplier),
             );
           }),
         ],
@@ -1902,11 +2210,15 @@ class SupplierCard extends StatelessWidget {
   const SupplierCard({
     super.key,
     required this.supplier,
+    required this.isSelected,
     required this.onRoute,
+    required this.onNavigate,
   });
 
   final Supplier supplier;
+  final bool isSelected;
   final VoidCallback onRoute;
+  final VoidCallback onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -1926,12 +2238,20 @@ class SupplierCard extends StatelessWidget {
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: TrailerStockColors.steelBlue.withValues(alpha: 0.10),
+                    color: isSelected
+                        ? TrailerStockColors.industrialOrange.withValues(
+                            alpha: 0.14,
+                          )
+                        : TrailerStockColors.steelBlue.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Icon(
-                    Icons.storefront_outlined,
-                    color: TrailerStockColors.steelBlue,
+                  child: Icon(
+                    isSelected
+                        ? Icons.radar_outlined
+                        : Icons.storefront_outlined,
+                    color: isSelected
+                        ? TrailerStockColors.industrialOrange
+                        : TrailerStockColors.steelBlue,
                   ),
                 ),
                 ConstrainedBox(
@@ -1955,8 +2275,12 @@ class SupplierCard extends StatelessWidget {
                   ),
                 ),
                 StatusChip(
-                  label: supplier.openNow ? 'Abierto' : 'Cerrado',
-                  color: supplier.openNow
+                  label: isSelected
+                      ? 'En mapa'
+                      : (supplier.openNow ? 'Abierto' : 'Cerrado'),
+                  color: isSelected
+                      ? TrailerStockColors.industrialOrange
+                      : supplier.openNow
                       ? TrailerStockColors.validationGreen
                       : TrailerStockColors.metalGray,
                 ),
@@ -2029,10 +2353,26 @@ class SupplierCard extends StatelessWidget {
               '${supplier.phone} • ${supplier.distanceKm.toStringAsFixed(1)} km',
             ),
             const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: onRoute,
-              icon: const Icon(Icons.map_outlined),
-              label: const Text('Abrir ruta'),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: onRoute,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isSelected
+                        ? TrailerStockColors.industrialOrange
+                        : null,
+                  ),
+                  icon: const Icon(Icons.map_outlined),
+                  label: Text(isSelected ? 'Proveedor activo' : 'Ver en mapa'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onNavigate,
+                  icon: const Icon(Icons.navigation_outlined),
+                  label: const Text('Navegar'),
+                ),
+              ],
             ),
           ],
         ),

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SessionUser {
-  const SessionUser({
-    required this.name,
-    required this.role,
-  });
+  const SessionUser({required this.name, required this.role});
 
   final String name;
   final UserRole role;
@@ -28,10 +25,10 @@ enum UserRole {
 
 extension UserRoleX on UserRole {
   String get value => switch (this) {
-        UserRole.admin => 'admin',
-        UserRole.storekeeper => 'storekeeper',
-        UserRole.supervisor => 'supervisor',
-      };
+    UserRole.admin => 'admin',
+    UserRole.storekeeper => 'storekeeper',
+    UserRole.supervisor => 'supervisor',
+  };
 
   static UserRole fromValue(String value) {
     switch (value) {
@@ -117,11 +114,11 @@ enum MovementType {
 
 extension MovementTypeX on MovementType {
   String get value => switch (this) {
-        MovementType.entry => 'entry',
-        MovementType.exit => 'exit',
-        MovementType.adjustment => 'adjustment',
-        MovementType.returning => 'returning',
-      };
+    MovementType.entry => 'entry',
+    MovementType.exit => 'exit',
+    MovementType.adjustment => 'adjustment',
+    MovementType.returning => 'returning',
+  };
 
   static MovementType fromValue(String value) {
     switch (value) {
@@ -138,10 +135,7 @@ extension MovementTypeX on MovementType {
   }
 }
 
-enum AdjustmentSign {
-  plus,
-  minus,
-}
+enum AdjustmentSign { plus, minus }
 
 enum MovementStatus {
   completed('Registrado', Color(0xFF0F766E)),
@@ -156,11 +150,11 @@ enum MovementStatus {
 
 extension MovementStatusX on MovementStatus {
   String get value => switch (this) {
-        MovementStatus.completed => 'completed',
-        MovementStatus.pendingApproval => 'pendingApproval',
-        MovementStatus.approved => 'approved',
-        MovementStatus.rejected => 'rejected',
-      };
+    MovementStatus.completed => 'completed',
+    MovementStatus.pendingApproval => 'pendingApproval',
+    MovementStatus.approved => 'approved',
+    MovementStatus.rejected => 'rejected',
+  };
 
   static MovementStatus fromValue(String value) {
     switch (value) {
@@ -236,9 +230,14 @@ class MovementRecord {
       type: MovementTypeX.fromValue(map['type']?.toString() ?? 'exit'),
       quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
       responsible: map['responsible']?.toString() ?? '',
-      timestamp: DateTime.tryParse(map['timestamp']?.toString() ?? '') ?? DateTime.now(),
-      status: MovementStatusX.fromValue(map['status']?.toString() ?? 'completed'),
-      evidenceAttached: map['evidenceAttached'] == true ||
+      timestamp:
+          DateTime.tryParse(map['timestamp']?.toString() ?? '') ??
+          DateTime.now(),
+      status: MovementStatusX.fromValue(
+        map['status']?.toString() ?? 'completed',
+      ),
+      evidenceAttached:
+          map['evidenceAttached'] == true ||
           map['evidenceAttached']?.toString() == '1',
       notes: map['notes']?.toString() ?? '',
     );
@@ -279,10 +278,10 @@ enum ApprovalStatus {
 
 extension ApprovalStatusX on ApprovalStatus {
   String get value => switch (this) {
-        ApprovalStatus.pending => 'pending',
-        ApprovalStatus.approved => 'approved',
-        ApprovalStatus.rejected => 'rejected',
-      };
+    ApprovalStatus.pending => 'pending',
+    ApprovalStatus.approved => 'approved',
+    ApprovalStatus.rejected => 'rejected',
+  };
 
   static ApprovalStatus fromValue(String value) {
     switch (value) {
@@ -344,7 +343,9 @@ class ApprovalRequest {
       supervisor: map['supervisor']?.toString() ?? '',
       comments: map['comments']?.toString() ?? '',
       status: ApprovalStatusX.fromValue(map['status']?.toString() ?? 'pending'),
-      requestedAt: DateTime.tryParse(map['requestedAt']?.toString() ?? '') ?? DateTime.now(),
+      requestedAt:
+          DateTime.tryParse(map['requestedAt']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -357,6 +358,8 @@ class Supplier {
     required this.address,
     required this.distanceKm,
     required this.openNow,
+    required this.latitude,
+    required this.longitude,
   });
 
   final String name;
@@ -365,8 +368,15 @@ class Supplier {
   final String address;
   final double distanceKm;
   final bool openNow;
+  final double latitude;
+  final double longitude;
 
   factory Supplier.fromMap(Map<String, dynamic> map) {
+    final fallbackCoordinates = _SupplierCoordinateResolver.resolve(
+      name: map['name']?.toString() ?? '',
+      address: map['address']?.toString() ?? '',
+    );
+
     return Supplier(
       name: map['name']?.toString() ?? '',
       specialty: map['specialty']?.toString() ?? '',
@@ -374,6 +384,45 @@ class Supplier {
       address: map['address']?.toString() ?? '',
       distanceKm: double.tryParse(map['distanceKm']?.toString() ?? '0') ?? 0,
       openNow: map['openNow'] == true || map['openNow']?.toString() == '1',
+      latitude:
+          double.tryParse(map['latitude']?.toString() ?? '') ??
+          fallbackCoordinates.latitude,
+      longitude:
+          double.tryParse(map['longitude']?.toString() ?? '') ??
+          fallbackCoordinates.longitude,
     );
+  }
+}
+
+class SupplierCoordinates {
+  const SupplierCoordinates({required this.latitude, required this.longitude});
+
+  final double latitude;
+  final double longitude;
+}
+
+class _SupplierCoordinateResolver {
+  static SupplierCoordinates resolve({
+    required String name,
+    required String address,
+  }) {
+    final normalized = '${name.toLowerCase()} ${address.toLowerCase()}';
+
+    if (normalized.contains('industrial parts hub') ||
+        normalized.contains('1450 east beltway')) {
+      return const SupplierCoordinates(latitude: 29.7893, longitude: -95.2206);
+    }
+
+    if (normalized.contains('trailer electric solutions') ||
+        normalized.contains('920 northline')) {
+      return const SupplierCoordinates(latitude: 29.8087, longitude: -95.3612);
+    }
+
+    if (normalized.contains('heavy duty wheels center') ||
+        normalized.contains('782 market st')) {
+      return const SupplierCoordinates(latitude: 29.7604, longitude: -95.3698);
+    }
+
+    return const SupplierCoordinates(latitude: 29.7604, longitude: -95.3698);
   }
 }

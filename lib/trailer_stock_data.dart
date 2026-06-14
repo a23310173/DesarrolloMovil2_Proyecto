@@ -170,6 +170,8 @@ class MockTrailerStockRepository implements TrailerStockRepository {
           address: '1450 East Beltway, Houston, TX',
           distanceKm: 4.2,
           openNow: true,
+          latitude: 29.7893,
+          longitude: -95.2206,
         ),
         Supplier(
           name: 'Trailer Electric Solutions',
@@ -178,6 +180,8 @@ class MockTrailerStockRepository implements TrailerStockRepository {
           address: '920 Northline Dr, Houston, TX',
           distanceKm: 6.8,
           openNow: true,
+          latitude: 29.8087,
+          longitude: -95.3612,
         ),
         Supplier(
           name: 'Heavy Duty Wheels Center',
@@ -186,6 +190,8 @@ class MockTrailerStockRepository implements TrailerStockRepository {
           address: '782 Market St, Houston, TX',
           distanceKm: 12.1,
           openNow: false,
+          latitude: 29.7604,
+          longitude: -95.3698,
         ),
       ],
     );
@@ -206,8 +212,8 @@ class TrailerStockController extends ChangeNotifier {
   TrailerStockController({
     required TrailerStockRepository repository,
     required ApiConfiguration apiConfiguration,
-  })  : _repository = repository,
-        apiConfiguration = apiConfiguration;
+  }) : _repository = repository,
+       apiConfiguration = apiConfiguration;
 
   final TrailerStockRepository _repository;
   final ApiConfiguration apiConfiguration;
@@ -233,7 +239,8 @@ class TrailerStockController extends ChangeNotifier {
       final matchesCategory =
           inventoryCategory == 'Todos' || item.category == inventoryCategory;
       final query = inventoryQuery.trim().toLowerCase();
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           item.name.toLowerCase().contains(query) ||
           item.sku.toLowerCase().contains(query) ||
           item.category.toLowerCase().contains(query);
@@ -301,9 +308,10 @@ class TrailerStockController extends ChangeNotifier {
     final newStock = switch (draft.type) {
       MovementType.entry => item.stock + draft.quantity,
       MovementType.exit => item.stock - draft.quantity,
-      MovementType.adjustment => draft.adjustmentSign == AdjustmentSign.plus
-          ? item.stock + draft.quantity
-          : item.stock - draft.quantity,
+      MovementType.adjustment =>
+        draft.adjustmentSign == AdjustmentSign.plus
+            ? item.stock + draft.quantity
+            : item.stock - draft.quantity,
       MovementType.returning => item.stock + draft.quantity,
     };
 
@@ -351,7 +359,9 @@ class TrailerStockController extends ChangeNotifier {
   }
 
   void resolveApproval(ApprovalRequest request, bool approved) {
-    final approvalIndex = _approvals.indexWhere((item) => item.id == request.id);
+    final approvalIndex = _approvals.indexWhere(
+      (item) => item.id == request.id,
+    );
     if (approvalIndex == -1) {
       return;
     }
@@ -360,7 +370,9 @@ class TrailerStockController extends ChangeNotifier {
       status: approved ? ApprovalStatus.approved : ApprovalStatus.rejected,
     );
 
-    final movementIndex = _movements.indexWhere((item) => item.id == request.movementId);
+    final movementIndex = _movements.indexWhere(
+      (item) => item.id == request.movementId,
+    );
     if (movementIndex != -1) {
       _movements[movementIndex] = _movements[movementIndex].copyWith(
         status: approved ? MovementStatus.approved : MovementStatus.rejected,
